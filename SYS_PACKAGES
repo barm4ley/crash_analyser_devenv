@@ -1,5 +1,5 @@
-
 # List of system packages to install
+
 SYS_PACKAGES=(python \
               python3 \
               docker \

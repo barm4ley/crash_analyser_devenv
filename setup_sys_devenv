@@ -25,7 +25,6 @@ source "${ABS_SRC_PATH__OS_TOOLS_SELECTOR}"
 # Include source suitable for current OS
 include_os_setting_source
 
-#---------------------------------------------------------
 
 #---------------------------------------------------------
 # Installs system package using system install tool
@@ -35,7 +34,7 @@ include_os_setting_source
 # Arguments:
 #   $1 - Package to install
 # Returns:
-#   None
+#   Package installation status
 #---------------------------------------------------------
 function sys_install() {
     local pkg="$1"
@@ -53,14 +52,23 @@ function sys_install() {
     echo "${retval}"
 }
 
-#---------------------------------------------------------
 
+#---------------------------------------------------------
+# Installs multiple system packages that are listed in 
+#  SYS_PACKAGES file
+# Globals:
+#   SYS_PACKAGES - List of packages to install
+# Arguments:
+#   None
+# Returns:
+#   None
+#---------------------------------------------------------
 function install_sys_packages() {
     for i in ${SYS_PACKAGES[@]}; do
         local install_status=$(sys_install ${i})
     done
 }
 
-
+# Start packages installation
 install_sys_packages
 
