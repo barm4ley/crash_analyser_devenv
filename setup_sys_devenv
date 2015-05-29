@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# This script is for installing all software packages developer needs to successfully proceed with project
+
+# Including libraries
+readonly PATH_TO_LIB="lib"
+
+# Including generator that produces absolute paths for
+#   all other libraries that are located in lib/ directory
+# Please do not put library includes before path generator
+#   include
+PATH_GENERATOR="path_generator.in.sh"
+source "${PATH_TO_LIB}/${PATH_GENERATOR}"
+
+# Include list of package to install
+readonly SYS_PACKAGES_SOURCE="SYS_PACKAGES"
+source "${SYS_PACKAGES_SOURCE}"
+
+# Include common library
+source "${ABS_SRC_PATH__COMMON}"
+
+# Select OS dependent package manager to install system applications
+source "${ABS_SRC_PATH__OS_TOOLS_SELECTOR}"
+
+# Include source suitable for current OS
+include_os_setting_source
+
+#---------------------------------------------------------
+
+#---------------------------------------------------------
+# Installs system package using system install tool
+# Globals:
+#   SYS_INSTALL_RET_SUCCESS
+#   SYS_INSTALL_RET_FAILURE
+# Arguments:
+#   $1 - Package to install
+# Returns:
+#   None
+#---------------------------------------------------------
+function sys_install() {
+    local pkg="$1"
+    sys_print_info "Installing system package ${pkg}"
+    local retval=$(install_package "${pkg}")
+
+    if [[ ${retval} == "${SYS_INSTALL_RET_SUCCESS}" ]]; then
+        sys_print_info "${pkg} installation DONE"
+    elif [[ "${retval}" == "${SYS_INSTALL_RET_FAILURE}" ]]; then
+        sys_print_err "Failed to install ${pkg} package"
+    else
+        sys_print_err "Failed to install ${pkg} package. Unknown error: ${retval}"
+    fi
+
+    echo "${retval}"
+}
+
+#---------------------------------------------------------
+
+function install_sys_packages() {
+    for i in ${SYS_PACKAGES[@]}; do
+        local install_status=$(sys_install ${i})
+    done
+}
+
+
+install_sys_packages
+
