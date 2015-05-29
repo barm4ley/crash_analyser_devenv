@@ -15,6 +15,9 @@ SYS_INSTALL_RET_FAILURE="1"
 SYS_INSTALL_RET_SUCCESS="0"
 #---------------------------------------------------------
 
+command_exists () {
+    type "$1" &> /dev/null ;
+}
 
 #---------------------------------------------------------
 # Check existence of system installation tool
@@ -27,7 +30,11 @@ SYS_INSTALL_RET_SUCCESS="0"
 #     "0" if exists, "1" otherwise
 #---------------------------------------------------------
 function __check_sys_installer_existence() {
-    echo "$(which ${SYS_INSTALLER})"
+    local result="0"
+    if ! [ -x "$(command -v ${SYS_INSTALLER})" ]; then
+        result="1"
+    fi
+    echo "${result}"
 }
 
 
@@ -57,13 +64,21 @@ echo "$(ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install
 #   Status of installer exisence or installation status
 #---------------------------------------------------------
 function preinstall() {
+    sys_print_info "Executing preinstall..."
+
     local installer_existence="$(__check_sys_installer_existence)"
-    if [[ ${installer_existence} = "0" ]]; then echo "${installer_existence}"; fi
+    local result="$?"
+    if [[ ${installer_existence} != "0" ]]; then
+        echo "${installer_existence}"
+        sys_print_warn "Installer does't exist. Trying to install it"
+        local installer_installation_res="$(__install_sys_installer)"
+        result="$?"
+    else
+        sys_print_info "Installer is present"
+    fi
 
-    sys_print_warn "Installer does\'t exist. Trying to install it"
-    local installer_installation_res="$(__install_sys_installer)"
 
-    echo "${installer_installation_res}"
+    echo "${result}"
 }
 
 
@@ -80,7 +95,7 @@ function preinstall() {
 #---------------------------------------------------------
 function install_package() {
     local pkg="$1"
-    $(${SYS_INSTALLER} ${SYS_INSTALL_CMD} ${pkg} 1>&2 > /dev/null )
+    $(${SYS_INSTALLER} ${SYS_INSTALL_CMD} ${pkg} > /dev/null 2>&1)
     local result="$?"
     echo "${result}"
 }
@@ -115,6 +130,8 @@ function update_package() {
 #   Status of installer exisence or installation status
 #---------------------------------------------------------
 function postinstall() {
-    echo "0"
+    sys_print_info "Executing postinstall..."
+
+    #echo "0"
 }
 

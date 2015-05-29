@@ -69,6 +69,15 @@ function install_sys_packages() {
     done
 }
 
+
+preinstall
+res="$?"
+if [[ $res != "0" ]]; then
+    sys_print_err "Preinstall failure. Exiting..."
+    exit 1
+fi
+
 # Start packages installation
 install_sys_packages
 
+postinstall
