@@ -5,16 +5,15 @@
 # Including libraries
 readonly PATH_TO_LIB="lib"
 
+# Default list of packages
+readonly SYS_PACKAGES_SOURCE="SYS_PACKAGES"
+
 # Including generator that produces absolute paths for
 #   all other libraries that are located in lib/ directory
 # Please do not put library includes before path generator
 #   include
 PATH_GENERATOR="path_generator.in.sh"
 source "${PATH_TO_LIB}/${PATH_GENERATOR}"
-
-# Include list of package to install
-readonly SYS_PACKAGES_SOURCE="SYS_PACKAGES"
-source "${SYS_PACKAGES_SOURCE}"
 
 # Include common library
 source "${ABS_SRC_PATH__COMMON}"
@@ -25,6 +24,40 @@ source "${ABS_SRC_PATH__OS_TOOLS_SELECTOR}"
 # Include source suitable for current OS
 include_os_setting_source
 
+#---------------------------------------------------------
+OPT_INSTALL="0"
+OPT_UPDATE="0"
+OPT_REMOVE="0"
+
+PKG_LIST_TO_USE=$SYS_PACKAGES_SOURCE
+#---------------------------------------------------------
+
+function print_usage() {
+    script_name=$(basename $0)
+    sys_print_info ""
+    sys_print_info "NAME:"
+    sys_print_info "    ${script_name} - Install/Remove/Update software packages list"
+    sys_print_info "SYNOPSIS:"
+    sys_print_info "    ${script_name} -i [-e absolute_path_to_external_config]"
+    sys_print_info "    ${script_name} -u [-e absolute_path_to_external_config]"
+    sys_print_info "    ${script_name} -r [-e absolute_path_to_external_config]"
+    sys_print_info ""
+    sys_print_info "OPTIONS:"
+    sys_print_info "    -i Install software packages"
+    sys_print_info "    -u Update software packages"
+    sys_print_info "    -r Remove software packages"
+    sys_print_info "    -e External software packages list file"
+    sys_print_info "        <absolute_path_to_external_config> - absolute path to file"
+    sys_print_info ""
+    sys_print_info "NOTES:"
+    sys_print_info "    If -e option is not specified than bundled version will be used."
+    sys_print_info "    It is possible to use -i, -d and -u options on the same command"
+    sys_print_info "    line. In this case actions will be executed in such sequence:"
+    sys_print_info "        1. Remove."
+    sys_print_info "        2. Install."
+    sys_print_info "        3. Update."
+    sys_print_info ""
+}
 
 #---------------------------------------------------------
 # Installs system package using system install tool
@@ -39,17 +72,18 @@ include_os_setting_source
 function sys_install() {
     local pkg="$1"
     sys_print_info "Installing system package ${pkg}"
-    local retval=$(install_package "${pkg}")
+    install_package ${pkg}
+    local retval=$?
 
-    if [[ ${retval} == "${SYS_INSTALL_RET_SUCCESS}" ]]; then
+    if [[ ${retval} == ${SYS_INSTALL_RET_SUCCESS} ]]; then
         sys_print_info "${pkg} installation DONE"
-    elif [[ "${retval}" == "${SYS_INSTALL_RET_FAILURE}" ]]; then
+    elif [[ ${retval} == ${SYS_INSTALL_RET_FAILURE} ]]; then
         sys_print_err "Failed to install ${pkg} package"
     else
         sys_print_err "Failed to install ${pkg} package. Unknown error: ${retval}"
     fi
 
-    echo "${retval}"
+    return ${retval}
 }
 
 
@@ -65,19 +99,103 @@ function sys_install() {
 #---------------------------------------------------------
 function install_sys_packages() {
     for i in ${SYS_PACKAGES[@]}; do
-        local install_status=$(sys_install ${i})
+        sys_install ${i}
     done
 }
 
 
-preinstall
-res="$?"
-if [[ $res != "0" ]]; then
-    sys_print_err "Preinstall failure. Exiting..."
+function do_install() {
+    sys_print_info "Entering preinstall phase..."
+    #val=$(preinstall)
+    preinstall
+    result=$?
+    #sys_print_warn "Result: ${result} Val: ${val}"
+    sys_print_warn "Result: ${result}"
+    if [[ ${result} != 0 ]]; then
+        sys_print_err "Preinstall failure. Exiting..."
+        exit ${result}
+    fi
+
+    sys_print_info "Entering install phase..."
+    # Start packages installation
+    install_sys_packages
+
+    sys_print_info "Entering postinstall phase..."
+    #val=$(postinstall)
+    postinstall
+    result=$?
+    #sys_print_warn "Result: ${result} Val: ${val}"
+    sys_print_warn "Result: ${result}"
+    if [[ "${result}" != "0" ]]; then
+        sys_print_err "Postinstall failure. Exiting..."
+        exit ${result}
+    fi
+}
+
+function do_update() {
+    echo "Not implemented yet"
+    echo "0"
+}
+
+function do_remove() {
+    echo "Not implemented yet"
+    echo "0"
+}
+
+#---------------------------------------------------------
+# Parse command line options here
+
+options_found=0
+
+while getopts "iure:" opt; do
+    case $opt in
+        i)
+            OPT_INSTALL="1"
+            options_found=1
+            ;;
+        u)
+            OPT_UPDATE="1"
+            options_found=1
+            ;;
+        r)
+            OPT_REMOVE="1"
+            options_found=1
+            ;;
+        e)
+            PKG_LIST_TO_USE=$OPTARG
+            ;;
+        \?)
+            sys_print_err "Invalid option: -$OPTARG"
+            exit 1
+            ;;
+        :)
+            sys_print_err "Option -$OPTARG requires an argument."
+            exit 1
+            ;;
+    esac
+done
+
+if ((!options_found)); then
+    print_usage
     exit 1
 fi
 
-# Start packages installation
-install_sys_packages
+sys_print_info "Using ${PKG_LIST_TO_USE} as a package list source."
+source $PKG_LIST_TO_USE
 
-postinstall
+#---------------------------------------------------------
+
+if [[ $OPT_REMOVE -eq "1" ]]; then
+    sys_print_info "Removing..."
+    do_remove
+fi
+
+if [[ $OPT_INSTALL -eq "1" ]]; then
+    sys_print_info "Installing..."
+    do_install
+fi
+
+if [[ $OPT_UPDATE -eq "1" ]]; then
+    sys_print_info "Updating..."
+    do_update
+fi

@@ -1,7 +1,7 @@
 # Library for common functionality
 
 # Standart message prefix
-__SYS_PREFIX="DEVENV <SYS>"
+__SYS_PREFIX="DEVENV"
 
 # Standart log level indication strings
 __INFO_STR="INFO"
@@ -9,6 +9,11 @@ __WARN_STR="WARN"
 __ERR_STR="ERR!"
 __UNKNOWN_STR="????"
 
+
+
+command_exists () {
+    type "$1" &> /dev/null ;
+}
 
 #---------------------------------------------------------
 # Add effects to the string
@@ -109,7 +114,7 @@ function __colorize_report_by_level() {
             level_str="${__INFO_STR}"
             ;;
         warn)
-            prefix_effects=(bold bold)
+            prefix_effects=(bold yellow)
             message_effects=(yellow)
             
             level_str="${__WARN_STR}"
@@ -136,7 +141,7 @@ function __colorize_report_by_level() {
     local message_formatted_str=$(printf " %s" "${msg}")
     local message_colorized_str=$(__add_string_effects "${message_formatted_str}" "${message_effects[@]}")
     
-    echo "${prefix_colorized_str}${message_colorized_str}" 1>&2
+    echo "${prefix_colorized_str}${message_colorized_str}"
 }
 
 
@@ -166,7 +171,7 @@ function sys_print_info() {
 #---------------------------------------------------------
 function sys_print_warn() {
     local msg="$1"
-    __colorize_report_by_level "${__SYS_PREFIX}" "${msg}" warn
+    __colorize_report_by_level "${__SYS_PREFIX}" "${msg}" warn 1>&2
 }
 
 
@@ -181,7 +186,7 @@ function sys_print_warn() {
 #---------------------------------------------------------
 function sys_print_err() {
     local msg="$1"
-    __colorize_report_by_level "${__SYS_PREFIX}" "${msg}" err
+    __colorize_report_by_level "${__SYS_PREFIX}" "${msg}" err 1>&2
 }
 
 

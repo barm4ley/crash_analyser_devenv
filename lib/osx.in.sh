@@ -2,22 +2,13 @@
 
 source "${ABS_SRC_PATH__COMMON}"
 
-osx_config_message="OSX configuration selected"
-sys_print_info "${osx_config_message}"
-
-
 #---------------------------------------------------------
 SYS_INSTALLER=brew
 SYS_INSTALL_CMD=install
 SYS_UPDATE_CMD=update
 #---------------------------------------------------------
-SYS_INSTALL_RET_FAILURE="1"
-SYS_INSTALL_RET_SUCCESS="0"
-#---------------------------------------------------------
-
-command_exists () {
-    type "$1" &> /dev/null ;
-}
+SYS_INSTALL_RET_FAILURE=1
+SYS_INSTALL_RET_SUCCESS=0
 
 #---------------------------------------------------------
 # Check existence of system installation tool
@@ -30,11 +21,8 @@ command_exists () {
 #     "0" if exists, "1" otherwise
 #---------------------------------------------------------
 function __check_sys_installer_existence() {
-    local result="0"
-    if ! [ -x "$(command -v ${SYS_INSTALLER})" ]; then
-        result="1"
-    fi
-    echo "${result}"
+    command_exists ${SYS_INSTALLER}
+    return $?
 }
 
 
@@ -48,7 +36,8 @@ function __check_sys_installer_existence() {
 #   Status of system installation tool installation
 #---------------------------------------------------------
 function __install_sys_installer() {
-echo "$(ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)")"
+    $(ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)")
+    return $?
 }
 
 
@@ -64,21 +53,26 @@ echo "$(ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install
 #   Status of installer exisence or installation status
 #---------------------------------------------------------
 function preinstall() {
-    sys_print_info "Executing preinstall..."
+    sys_print_info "OSX configuration selected"
 
-    local installer_existence="$(__check_sys_installer_existence)"
-    local result="$?"
+    local result=1
+
+    $(__check_sys_installer_existence)
+    local installer_existence="$?"
+    result=${installer_existence}
+
+    sys_print_warn "Installer existence: ${installer_existence}"
+
     if [[ ${installer_existence} != "0" ]]; then
-        echo "${installer_existence}"
         sys_print_warn "Installer does't exist. Trying to install it"
-        local installer_installation_res="$(__install_sys_installer)"
-        result="$?"
+        $(__install_sys_installer)
+        local installer_installation_res="$?"
+        result=${installer_installation_res}
     else
         sys_print_info "Installer is present"
     fi
 
-
-    echo "${result}"
+    return ${result}
 }
 
 
@@ -96,8 +90,8 @@ function preinstall() {
 function install_package() {
     local pkg="$1"
     $(${SYS_INSTALLER} ${SYS_INSTALL_CMD} ${pkg} > /dev/null 2>&1)
-    local result="$?"
-    echo "${result}"
+    local result=$?
+    return ${result}
 }
 
 
@@ -115,8 +109,8 @@ function install_package() {
 function update_package() {
     local pkg="$1"
     ${SYS_INSTALLER} {$SYS_UPDATE_CMD} ${pkg}
-    local result="$?"
-    echo "${result}"
+    local result=$?
+    return ${result}
 }
 
 
@@ -130,8 +124,6 @@ function update_package() {
 #   Status of installer exisence or installation status
 #---------------------------------------------------------
 function postinstall() {
-    sys_print_info "Executing postinstall..."
-
-    #echo "0"
+    return 1
 }
 
